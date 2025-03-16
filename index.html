@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salta el Creeper</title>
+    <style> 
+        body {
+            background-color: lightblue;
+            text-align: center;
+            margin: 0;
+            overflow: hidden;
+        }
+        h1 {
+            font-family: Arial, sans-serif;
+            color: white;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+        #bgVideo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        canvas {
+            border: 2px solid black;
+            background-color: transparent;
+            position: relative;
+            z-index: 1;
+        }
+        /* Botones */
+        .button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            font-size: 20px;
+            padding: 15px 30px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        button:active {
+            background-color: #005f73;
+        }
+    </style>
+</head>
+<body>
+    <h1>Salta el Creeper</h1>
+
+    <video id="bgVideo" autoplay loop muted>
+        <source src="fondo.mp4" type="video/mp4">
+        Tu navegador no soporta videos.
+    </video>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="button-container">
+        <button id="jumpButton">Saltar</button>
+        <button id="pauseButton">Pausar</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const jumpButton = document.getElementById("jumpButton");
+        const pauseButton = document.getElementById("pauseButton");
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * 0.8;
+            canvas.height = window.innerHeight * 0.5;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        let steve, creeper, gravity, jumpPower, gameOver, score, paused;
+        let steveImg = new Image();
+        let creeperImg = new Image();
+
+        steveImg.src = "steve.png";   
+        creeperImg.src = "creeper.png"; 
+
+        function init() {
+            let isMobile = window.innerWidth < 768; 
+
+            steve = { 
+                x: 50, 
+                y: canvas.height - 80, 
+                width: 50, 
+                height: 50, 
+                vy: 0, 
+                jumping: false 
+            };
+            creeper = { 
+                x: canvas.width, 
+                y: canvas.height - 70, 
+                width: 35, 
+                height: 35, 
+                speed: isMobile ? 3 : 5 
+            };
+            gravity = 1.5;
+            jumpPower = isMobile ? -25 : -20;
+            gameOver = false;
+            score = 0;
+            paused = false;
+        }
+
+        function update() {
+            if (gameOver || paused) return;
+
+            creeper.x -= creeper.speed;
+            if (creeper.x < -35) {
+                creeper.x = canvas.width;
+                score++;
+                if (score % 5 === 0) {
+                    creeper.speed += 0.5;
+                }
+            }
+
+            steve.y += steve.vy;
+            steve.vy += gravity;
+
+            if (steve.y >= canvas.height - 80) {
+                steve.y = canvas.height - 80;
+                steve.vy = 0;
+                steve.jumping = false;
+            }
+
+            if (
+                steve.x < creeper.x + creeper.width &&
+                steve.x + steve.width > creeper.x &&
+                steve.y < creeper.y + creeper.height &&
+                steve.y + steve.height > creeper.y
+            ) {
+                gameOver = true;
+                alert(`¡Perdiste! Puntuación final: ${score}\nPresiona ESPACIO o toca la pantalla para jugar de nuevo.`);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(steveImg, steve.x, steve.y, steve.width, steve.height);
+            ctx.drawImage(creeperImg, creeper.x, creeper.y, creeper.width, creeper.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText(`Puntuación: ${score}`, 20, 30);
+
+            if (paused) {
+                ctx.fillStyle = "red";
+                ctx.font = "30px Arial";
+                ctx.fillText("Pausado", canvas.width / 2 - 50, canvas.height / 2);
+            }
+        }
+
+        function jump() {
+            if (!steve.jumping) {
+                steve.vy = jumpPower;
+                steve.jumping = true;
+            }
+        }
+
+        function resetGame() {
+            init();
+            gameLoop();
+        }
+
+        function togglePause() {
+            paused = !paused;
+            pauseButton.textContent = paused ? "Reanudar" : "Pausar";
+            if (!paused) {
+                gameLoop();
+            }
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.code === "Space") {
+                if (gameOver) {
+                    resetGame();
+                } else {
+                    jump();
+                }
+            } else if (event.code === "KeyP") { 
+                togglePause();
+            }
+        });
+
+        jumpButton.addEventListener("click", function () {
+            if (gameOver) {
+                resetGame();
+            } else {
+                jump();
+            }
+        });
+
+        pauseButton.addEventListener("click", togglePause);
+
+        canvas.addEventListener("touchstart", function () {
+            if (gameOver) {
+                resetGame();
+            } else {
+                jump();
+            }
+        });
+
+        function gameLoop() {
+            update();
+            draw();
+            if (!gameOver && !paused) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>
